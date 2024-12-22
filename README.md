@@ -27,8 +27,8 @@ A modern, cyberpunk-themed web application for finding and visualizing routes be
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/cyberroute.git
-cd cyberroute
+git clone https://github.com/xtle0o0/CyberRoute.git
+cd CyberRoute
 ```
 
 2. Install Python dependencies:
@@ -74,14 +74,6 @@ cyberroute/
     └── index.html     # Main application template
 ```
 
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -90,6 +82,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Map tiles by [CARTO](https://carto.com/)
 - Icons by [Font Awesome](https://fontawesome.com/)
-- Fonts by [Google Fonts](https://fonts.google.com/) 
-=======
-# CyberRoute
+- Fonts by [Google Fonts](https://fonts.google.com/)
