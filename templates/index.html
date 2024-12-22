@@ -1,0 +1,1842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberRoute - Cyberpunk Route Finder</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            /* Colors */
+            --primary-color: #00e5ff;
+            --primary-dark: #00b3cc;
+            --primary-light: #80f2ff;
+            --secondary-color: #0077ff;
+            --accent-color: #ff00ff;
+            --error-color: #ff0055;
+            --background: #000814;
+            --card-bg: rgba(0, 8, 20, 0.95);
+            --success-color: #00ff9d;
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-muted: rgba(255, 255, 255, 0.5);
+            
+            /* Typography */
+            --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-mono: 'Orbitron', monospace;
+            
+            /* Font Sizes */
+            --text-xs: 0.6875rem;   /* 11px */
+            --text-sm: 0.8125rem;   /* 13px */
+            --text-base: 0.9375rem; /* 15px */
+            --text-lg: 1rem;        /* 16px */
+            --text-xl: 1.125rem;    /* 18px */
+            --text-2xl: 1.25rem;    /* 20px */
+            
+            /* Spacing */
+            --spacing-xs: 0.375rem;  /* 6px */
+            --spacing-sm: 0.5rem;    /* 8px */
+            --spacing-md: 0.75rem;   /* 12px */
+            --spacing-lg: 1rem;      /* 16px */
+            --spacing-xl: 1.5rem;    /* 24px */
+            
+            /* Border Radius */
+            --radius-sm: 0.25rem;    /* 4px */
+            --radius-md: 0.375rem;   /* 6px */
+            --radius-lg: 0.5rem;     /* 8px */
+            --radius-xl: 0.75rem;    /* 12px */
+            
+            /* Shadows */
+            --shadow-sm: 0 2px 4px rgba(0, 229, 255, 0.1);
+            --shadow-md: 0 4px 8px rgba(0, 229, 255, 0.15);
+            --shadow-lg: 0 8px 16px rgba(0, 229, 255, 0.2);
+            --shadow-xl: 0 12px 24px rgba(0, 229, 255, 0.25);
+            --shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+            
+            /* Transitions */
+            --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+            
+            /* Z-index */
+            --z-base: 1;
+            --z-above: 10;
+            --z-overlay: 100;
+            --z-modal: 1000;
+            --z-max: 9999;
+        }
+
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body { 
+            font-family: var(--font-primary);
+            font-size: var(--text-base);
+            line-height: 1.5;
+            background-color: var(--background);
+            color: var(--text-primary);
+            overflow: hidden;
+            letter-spacing: -0.01em;
+        }
+
+        #map { 
+            height: 100vh;
+            width: 100%;
+            position: relative;
+            z-index: var(--z-base);
+            background: var(--background) !important;
+            transition: filter var(--transition-normal);
+        }
+
+        #map.loading {
+            filter: blur(4px) brightness(0.7);
+        }
+
+        .app-title {
+            position: absolute;
+            top: var(--spacing-md);
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: var(--font-mono);
+            font-size: var(--text-2xl);
+            font-weight: 700;
+            color: var(--primary-color);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            text-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+            z-index: var(--z-overlay);
+            padding: var(--spacing-sm) var(--spacing-xl);
+            background: rgba(0, 8, 20, 0.95);
+            border: 1px solid rgba(0, 229, 255, 0.15);
+            border-radius: var(--radius-lg);
+            transition: all var(--transition-normal);
+            overflow: hidden;
+        }
+
+        .app-title::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg,
+                transparent,
+                rgba(0, 229, 255, 0.1),
+                transparent
+            );
+            opacity: 0;
+            transition: var(--transition-normal);
+        }
+
+        .app-title::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: var(--radius-lg);
+            padding: 1px;
+            background: linear-gradient(90deg,
+                var(--primary-color),
+                var(--accent-color),
+                var(--primary-color)
+            );
+            -webkit-mask: 
+                linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0);
+            mask: 
+                linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: var(--transition-normal);
+        }
+
+        .app-title:hover {
+            transform: translateX(-50%) translateY(-2px);
+            text-shadow: 0 0 30px rgba(0, 229, 255, 0.6);
+            letter-spacing: 0.2em;
+        }
+
+        .app-title:hover::before {
+            opacity: 1;
+            animation: shimmer 2s linear infinite;
+        }
+
+        .app-title:hover::after {
+            opacity: 1;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        .control-panel {
+            position: absolute;
+            top: var(--spacing-xl);
+            right: var(--spacing-xl);
+            background: rgba(0, 8, 20, 0.95);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-xs);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(0, 229, 255, 0.15);
+            display: flex;
+            gap: var(--spacing-xs);
+            z-index: var(--z-overlay);
+            transition: var(--transition-normal);
+        }
+
+        .control-panel:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 20px rgba(0, 229, 255, 0.15);
+        }
+
+        .control-button {
+            background: rgba(0, 229, 255, 0.05);
+            color: var(--primary-color);
+            border: 1px solid rgba(0, 229, 255, 0.1);
+            padding: var(--spacing-sm);
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2.75rem;
+            height: 2.75rem;
+            position: relative;
+            overflow: hidden;
+            font-size: var(--text-lg);
+        }
+
+        .control-button i {
+            transition: transform var(--transition-fast);
+        }
+
+        .control-button:hover {
+            background: rgba(0, 229, 255, 0.1);
+            border-color: var(--primary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 229, 255, 0.2);
+        }
+
+        .control-button:hover i {
+            transform: scale(1.1);
+        }
+
+        .control-button.active {
+            background: var(--primary-color);
+            color: var(--background);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+        }
+
+        .control-button::after {
+            content: attr(data-shortcut);
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            font-size: var(--text-xs);
+            font-family: var(--font-mono);
+            opacity: 0.7;
+        }
+
+        .search-panel {
+            position: absolute;
+            top: var(--spacing-xl);
+            left: var(--spacing-xl);
+            background: rgba(0, 8, 20, 0.95);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-lg) var(--spacing-xl);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(0, 229, 255, 0.15);
+            z-index: var(--z-overlay);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-md);
+            max-width: 380px;
+            width: 90%;
+        }
+
+        .search-panel:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 20px rgba(0, 229, 255, 0.15);
+        }
+
+        .search-panel .panel-content {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+        }
+
+        .search-container {
+            position: relative;
+            margin-bottom: var(--spacing-sm);
+        }
+
+        .search-container:last-child {
+            margin-bottom: 0;
+            position: relative;
+            z-index: 1;  /* Lower z-index for the second container */
+        }
+
+        .search-container:first-child {
+            position: relative;
+            z-index: 2;  /* Higher z-index for the first container */
+        }
+
+        .search-input {
+            width: 100%;
+            height: 2.75rem;
+            padding: 0 var(--spacing-xl);
+            padding-left: calc(var(--spacing-xl) + 8px);
+            background: rgba(0, 8, 20, 0.8);
+            border: 1px solid rgba(0, 229, 255, 0.15);
+            border-radius: var(--radius-lg);
+            color: var(--text-primary);
+            font-family: var(--font-primary);
+            font-size: var(--text-sm);
+            font-weight: 400;
+            letter-spacing: 0;
+        }
+
+        .search-input:focus {
+            background: rgba(0, 8, 20, 0.95);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
+            font-weight: 300;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: var(--spacing-md);
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--primary-color);
+            opacity: 0.7;
+            font-size: var(--text-base);
+            pointer-events: none;
+            transition: var(--transition-normal);
+        }
+
+        .search-container:focus-within .search-icon {
+            opacity: 1;
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        .search-results {
+            position: absolute;
+            top: calc(100% + 5px);
+            left: 0;
+            right: 0;
+            background: var(--card-bg);
+            border-radius: var(--radius-md);
+            max-height: 250px;
+            overflow-y: auto;
+            display: none;
+            border: 1px solid rgba(0, 229, 255, 0.1);
+            box-shadow: var(--shadow-xl);
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { 
+                transform: translateY(-8px); 
+                opacity: 0; 
+            }
+            to { 
+                transform: translateY(0); 
+                opacity: 1; 
+            }
+        }
+
+        .search-result-item {
+            padding: var(--spacing-md) var(--spacing-lg);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+            border-bottom: 1px solid rgba(0, 229, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-xs);
+            background: var(--card-bg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .search-result-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 3px;
+            height: 100%;
+            background: var(--primary-color);
+            opacity: 0;
+            transform: translateX(-100%);
+            transition: all var(--transition-fast);
+        }
+
+        .search-result-item:hover {
+            background: rgba(0, 8, 20, 0.95);
+            padding-left: calc(var(--spacing-md) + 3px);
+        }
+
+        .search-result-item:hover::before {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .result-main-text {
+            font-size: var(--text-sm);
+            font-weight: 500;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .result-secondary-text {
+            font-size: var(--text-xs);
+            color: var(--text-secondary);
+            margin-left: calc(var(--spacing-md) + 4px);
+            font-weight: 400;
+        }
+
+        .instructions-panel {
+            position: absolute;
+            bottom: var(--spacing-xl);
+            left: var(--spacing-xl);
+            background: rgba(0, 8, 20, 0.85);
+            border-radius: var(--radius-xl);
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-lg);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 229, 255, 0.1);
+            z-index: var(--z-overlay);
+            max-width: 400px;
+            width: 90%;
+            max-height: 60vh;
+            overflow-y: auto;
+            display: none;
+            transition: var(--transition-normal);
+            transform: translateY(0);
+        }
+
+        .instructions-panel:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 20px rgba(0, 229, 255, 0.15);
+        }
+
+        .instructions-header {
+            border-bottom: 1px solid rgba(0, 229, 255, 0.1);
+            padding-bottom: var(--spacing-md);
+            margin-bottom: var(--spacing-md);
+            font-family: var(--font-display);
+        }
+
+        .instructions-header h3 {
+            font-size: var(--text-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
+        }
+
+        .route-summary {
+            font-size: var(--text-sm);
+            color: var(--text-secondary);
+            font-family: var(--font-primary);
+            font-weight: 400;
+        }
+
+        .instruction-item {
+            padding: var(--spacing-md) var(--spacing-lg);
+            margin: var(--spacing-xs) 0;
+            border-radius: var(--radius-lg);
+            background: rgba(0, 229, 255, 0.03);
+            transition: all var(--transition-fast);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: var(--spacing-lg);
+            border: 1px solid transparent;
+        }
+
+        .instruction-item:hover {
+            background: rgba(0, 229, 255, 0.05);
+            border-color: rgba(0, 229, 255, 0.1);
+            transform: translateX(var(--spacing-xs));
+        }
+
+        .instruction-text {
+            font-size: var(--text-sm);
+            color: var(--text-primary);
+            line-height: 1.5;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+
+        .instruction-text i {
+            color: var(--primary-color);
+            font-size: var(--text-base);
+            width: 20px;
+        }
+
+        .instruction-distance {
+            font-size: var(--text-xs);
+            color: var(--primary-color);
+            font-weight: 500;
+            font-family: var(--font-mono);
+            min-width: 80px;
+            text-align: right;
+            padding-left: var(--spacing-sm);
+            letter-spacing: 0;
+        }
+
+        .status-panel {
+            position: absolute;
+            bottom: var(--spacing-xl);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--card-bg);
+            padding: var(--spacing-sm) var(--spacing-xl);
+            border-radius: var(--radius-xl);
+            font-size: var(--text-sm);
+            font-weight: 500;
+            letter-spacing: -0.01em;
+            box-shadow: 0 3px 15px rgba(0, 229, 255, 0.15);
+            border: 1px solid rgba(0, 229, 255, 0.15);
+            z-index: var(--z-overlay);
+            display: none;
+            animation: slideUp 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .status-panel i {
+            margin-right: var(--spacing-sm);
+        }
+
+        .unit-toggle {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .app-title {
+                font-size: var(--text-lg);
+                padding: var(--spacing-xs) var(--spacing-lg);
+            }
+
+            .control-panel {
+                top: auto;
+                bottom: var(--spacing-xl);
+                right: 50%;
+                transform: translateX(50%);
+                padding: var(--spacing-xs);
+            }
+
+            .control-button {
+                min-width: 2.5rem;
+                height: 2.5rem;
+                font-size: var(--text-base);
+            }
+
+            .search-panel {
+                top: calc(var(--spacing-xl) + 40px);
+                left: var(--spacing-sm);
+                right: var(--spacing-sm);
+                width: auto;
+                padding: var(--spacing-md);
+            }
+
+            .instructions-panel {
+                bottom: calc(var(--spacing-xl) + 70px);
+                left: var(--spacing-sm);
+                right: var(--spacing-sm);
+                width: auto;
+                max-height: 35vh;
+                padding: var(--spacing-md);
+            }
+
+            .status-panel {
+                bottom: calc(var(--spacing-xl) + 70px);
+                font-size: var(--text-sm);
+                padding: var(--spacing-sm) var(--spacing-lg);
+            }
+        }
+
+        /* Custom scrollbar styles */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 8, 20, 0.8);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 229, 255, 0.3);
+            border-radius: 4px;
+            transition: var(--transition-fast);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 229, 255, 0.5);
+        }
+
+        /* Keyboard shortcuts tooltip */
+        [data-shortcut]::before {
+            content: attr(data-shortcut);
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--card-bg);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            opacity: 0;
+            visibility: hidden;
+            transition: var(--transition-fast);
+            white-space: nowrap;
+            box-shadow: var(--shadow-sm);
+        }
+
+        [data-shortcut]:hover::before {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(-5px);
+        }
+
+        /* Add marker styles and animations */
+        .marker-container {
+            position: relative;
+            width: 40px;
+            height: 40px;
+            transform-origin: center;
+            pointer-events: auto;
+            z-index: 1000;
+            animation: markerFloat 3s ease-in-out infinite;
+        }
+
+        .marker-inner {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .marker-core {
+            position: relative;
+            width: 12px;
+            height: 12px;
+            background: currentColor;
+            border-radius: 50%;
+            box-shadow: 0 0 20px currentColor;
+            animation: corePulse 2s infinite alternate ease-in-out;
+        }
+
+        .marker-core::after {
+            content: '';
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            border: 2px solid currentColor;
+            border-radius: 50%;
+            opacity: 0.5;
+            animation: ringPulse 2s infinite;
+        }
+
+        .marker-pin {
+            position: absolute;
+            bottom: 50%;
+            left: 50%;
+            width: 2px;
+            height: 24px;
+            background: currentColor;
+            transform: translateX(-50%);
+            transform-origin: bottom;
+            box-shadow: 0 0 10px currentColor;
+            animation: pinPulse 2s ease-in-out infinite;
+        }
+
+        .marker-pin::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid currentColor;
+            filter: drop-shadow(0 0 10px currentColor);
+        }
+
+        @keyframes markerFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        @keyframes corePulse {
+            0% { transform: scale(0.8); opacity: 0.6; }
+            100% { transform: scale(1.2); opacity: 1; }
+        }
+
+        @keyframes ringPulse {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        @keyframes pinPulse {
+            0% { transform: translateX(-50%) scaleY(0.95); }
+            50% { transform: translateX(-50%) scaleY(1.05); }
+            100% { transform: translateX(-50%) scaleY(0.95); }
+        }
+
+        .marker-preview {
+            opacity: 0.6;
+            transform: scale(0.9);
+            filter: saturate(0.7);
+        }
+
+        .path-particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            filter: blur(2px);
+            pointer-events: none;
+            box-shadow: 0 0 8px var(--primary-color);
+            opacity: 0.8;
+            animation: particlePulse 1.5s infinite alternate ease-in-out;
+        }
+
+        @keyframes particlePulse {
+            0% { transform: scale(0.8); opacity: 0.6; }
+            100% { transform: scale(1.2); opacity: 0.9; }
+        }
+
+        .path-line {
+            stroke: var(--primary-color);
+            stroke-width: 3;
+            stroke-dasharray: 10 15;
+            animation: dashFlow 40s linear infinite;
+            filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.6));
+        }
+
+        .path-glow {
+            stroke: var(--primary-color);
+            stroke-width: 8;
+            stroke-opacity: 0.15;
+            filter: blur(6px);
+        }
+
+        .node {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            transform: translate(-50%, -50%);
+        }
+
+        .node-core {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: var(--primary-color);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--primary-color);
+            animation: nodePulse 2s infinite alternate ease-in-out;
+        }
+
+        .node-rings {
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            border: 1px solid var(--primary-color);
+            border-radius: 50%;
+            opacity: 0.5;
+            animation: nodeRings 3s infinite ease-out;
+        }
+
+        @keyframes nodePulse {
+            from { transform: scale(0.8); }
+            to { transform: scale(1.2); }
+        }
+
+        @keyframes nodeRings {
+            0% { transform: scale(0.5); opacity: 0.8; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        @keyframes dashFlow {
+            to { stroke-dashoffset: -1000; }
+        }
+
+        .main-roads {
+            stroke: var(--primary-color);
+            stroke-width: 3;
+            stroke-opacity: 0.8;
+            filter: drop-shadow(0 0 8px var(--primary-color));
+        }
+
+        .secondary-roads {
+            stroke: var(--secondary-color);
+            stroke-width: 2;
+            stroke-opacity: 0.6;
+        }
+
+        .route-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 2px;
+            background: var(--primary-color);
+            box-shadow: 0 0 10px var(--primary-color);
+            transition: width 0.3s ease;
+        }
+
+        .search-loading {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--primary-color);
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: translateY(-50%) rotate(360deg); }
+        }
+
+        @keyframes markerPulse {
+            0% { 
+                transform: translate(-50%, -100%) scale(0); 
+                opacity: 0; 
+            }
+            50% { 
+                transform: translate(-50%, -100%) scale(1.2); 
+                opacity: 0.7; 
+            }
+            100% { 
+                transform: translate(-50%, -100%) scale(1); 
+                opacity: 1; 
+            }
+        }
+
+        @keyframes markerRemove {
+            0% { 
+                transform: translate(-50%, -100%) scale(1); 
+                opacity: 1; 
+            }
+            50% { 
+                transform: translate(-50%, -100%) scale(1.2); 
+                opacity: 0.5; 
+            }
+            100% { 
+                transform: translate(-50%, -100%) scale(0); 
+                opacity: 0; 
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(8px); 
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0); 
+                opacity: 1;
+            }
+        }
+
+        /* Collapsible panels */
+        .panel-header {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: var(--spacing-xs);
+            cursor: pointer;
+        }
+
+        .collapse-btn {
+            color: var(--primary-color);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: var(--spacing-xs);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+            opacity: 0.7;
+            width: 24px;
+            height: 24px;
+            border-radius: var(--radius-sm);
+        }
+
+        .collapse-btn:hover {
+            opacity: 1;
+            background: rgba(0, 229, 255, 0.1);
+        }
+
+        .collapse-btn i {
+            font-size: var(--text-sm);
+            transition: transform var(--transition-fast);
+        }
+
+        .collapsed .collapse-btn i {
+            transform: rotate(180deg);
+        }
+
+        /* Update collapsed panel styles */
+        .search-panel.collapsed,
+        .instructions-panel.collapsed {
+            padding: var(--spacing-xs);
+            background: rgba(0, 8, 20, 0.95);
+            border: 1px solid rgba(0, 229, 255, 0.15);
+            width: auto;
+            max-width: fit-content;
+        }
+
+        .control-panel.collapsed {
+            padding: var(--spacing-xs);
+            background: rgba(0, 8, 20, 0.95);
+            border: 1px solid rgba(0, 229, 255, 0.15);
+        }
+
+        .collapsed .panel-content {
+            display: none;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .collapse-btn {
+            color: var(--primary-color);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: var(--spacing-xs);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all var(--transition-fast);
+            opacity: 0.7;
+            width: 24px;
+            height: 24px;
+            border-radius: var(--radius-sm);
+        }
+
+        /* Ensure panels maintain hover effect when collapsed */
+        .control-panel.collapsed:hover,
+        .search-panel.collapsed:hover,
+        .instructions-panel.collapsed:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 20px rgba(0, 229, 255, 0.15);
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            .search-panel.collapsed,
+            .instructions-panel.collapsed,
+            .control-panel.collapsed {
+                padding: var(--spacing-xs);
+                width: auto;
+                max-width: fit-content;
+            }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1 class="app-title">CyberRoute</h1>
+    <div id="map"></div>
+    
+    <div class="control-panel">
+        <div class="panel-header">
+            <button class="collapse-btn" onclick="togglePanel(this.closest('.control-panel'))">
+                <i class="fas fa-chevron-up"></i>
+            </button>
+        </div>
+        <div class="panel-content">
+            <button class="control-button" onclick="setStartPoint()" title="Set Start Point" data-shortcut="S">
+                <i class="fas fa-map-marker-alt"></i>
+            </button>
+            <button class="control-button" onclick="setEndPoint()" title="Set End Point" data-shortcut="E">
+                <i class="fas fa-flag-checkered"></i>
+            </button>
+            <button class="control-button" onclick="findPath()" title="Calculate Route" data-shortcut="Space">
+                <i class="fas fa-route"></i>
+            </button>
+            <button class="control-button" onclick="resetMap()" title="Reset Map" data-shortcut="R">
+                <i class="fas fa-redo-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="search-panel">
+        <div class="panel-header">
+            <button class="collapse-btn" onclick="togglePanel(this.closest('.search-panel'))">
+                <i class="fas fa-chevron-up"></i>
+            </button>
+        </div>
+        <div class="panel-content">
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="startLocation" placeholder="Enter start location..." class="search-input">
+                <div class="search-loading" id="startLoading"></div>
+                <div id="startResults" class="search-results"></div>
+            </div>
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="endLocation" placeholder="Enter destination..." class="search-input">
+                <div class="search-loading" id="endLoading"></div>
+                <div id="endResults" class="search-results"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="instructions-panel">
+        <div class="panel-header">
+            <button class="collapse-btn" onclick="togglePanel(this.closest('.instructions-panel'))">
+                <i class="fas fa-chevron-up"></i>
+            </button>
+        </div>
+        <div class="panel-content">
+            <div class="instructions-header">
+                <h3>Route Instructions</h3>
+                <span class="route-summary"></span>
+            </div>
+            <div class="instructions-list"></div>
+        </div>
+    </div>
+
+    <div class="status-panel" id="status"></div>
+    <div class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <script>
+        // Initialize map variables
+        let map, startMarker, endMarker, pathLayer, previewMarker;
+        let activeMode = null;
+        let nodes = new Set();
+        let particles = [];
+
+        // Initialize map with better defaults
+        map = L.map('map', {
+            center: [40, 0],
+            zoom: 3,
+            zoomControl: false,
+            attributionControl: false,
+            minZoom: 2,
+            maxZoom: 18
+        });
+
+        // Add tile layer with dark theme
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '',
+            subdomains: 'abcd',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Add zoom control to a custom position
+        L.control.zoom({
+            position: 'bottomright'
+        }).addTo(map);
+
+        // Initialize markers as null
+        startMarker = null;
+        endMarker = null;
+
+        // Custom Cyber Marker Class
+        class CyberMarker extends L.Marker {
+            constructor(latlng, options) {
+                const opts = { ...options, icon: null };
+                super(latlng, opts);
+                this._type = options.markerType || 'default';
+                
+                this.setIcon(L.divIcon({
+                    className: 'marker-wrapper',
+                    html: this._createMarkerHtml(),
+                    iconSize: [40, 40],
+                    iconAnchor: [20, 40] // Adjust anchor point to bottom of pin
+                }));
+            }
+
+            _createMarkerHtml() {
+                const color = this._type === 'start' ? 'var(--primary-color)' : 'var(--accent-color)';
+                return `
+                    <div class="marker-container" style="color: ${color}">
+                        <div class="marker-inner">
+                            <div class="marker-core"></div>
+                        </div>
+                        <div class="marker-pin"></div>
+                    </div>
+                `;
+            }
+        }
+
+        // Create Marker Function
+        function createMarker(latlng, type) {
+            const marker = new CyberMarker(latlng, {
+                map: map,
+                markerType: type
+            });
+            
+            // Add creation animation
+            marker.on('add', function() {
+                const el = this.getElement();
+                if (el) {
+                    el.style.animation = 'markerPulse 0.5s ease-out';
+                    setTimeout(() => {
+                        el.style.animation = '';
+                    }, 500);
+                }
+            });
+
+            return marker;
+        }
+
+        // Path Particle Creation
+        function createPathParticle(latlng) {
+            const particle = L.marker(latlng, {
+                icon: L.divIcon({
+                    className: 'path-particle',
+                    iconSize: [8, 8]
+                })
+            });
+            return particle;
+        }
+
+        // Node Creation
+        function createNode(latlng, index, total) {
+            const intensity = Math.sin((index / total) * Math.PI);
+            const node = L.marker(latlng, {
+                icon: L.divIcon({
+                    className: 'node',
+                    html: `
+                        <div class="node-core" style="animation-delay: -${index * 0.1}s"></div>
+                        <div class="node-rings" style="animation-delay: -${index * 0.1}s"></div>
+                    `,
+                    iconSize: [12, 12]
+                })
+            });
+            return node;
+        }
+
+        // Path Animation
+        function animatePath(coordinates) {
+            clearPath();
+
+            // Create glow effect
+            window.glowPath = L.polyline([], {
+                className: 'path-glow'
+            }).addTo(map);
+
+            // Create main path
+            pathLayer = L.polyline([], {
+                className: 'path-line'
+            }).addTo(map);
+
+            let currentIndex = 0;
+            const animationSpeed = 50; // Lower number = slower animation
+            const particleCount = 3; // Reduced number of particles
+            const nodeInterval = 15; // Increased interval between nodes
+
+            function animateSegment() {
+                if (currentIndex >= coordinates.length) {
+                    return;
+                }
+
+                // Add next point to paths
+                const currentCoords = coordinates.slice(0, currentIndex + 1);
+                pathLayer.setLatLngs(currentCoords);
+                window.glowPath.setLatLngs(currentCoords);
+
+                // Add particles
+                if (currentIndex > 0 && currentIndex % 2 === 0) {
+                    for (let i = 0; i < particleCount; i++) {
+                        const particleIndex = Math.max(0, currentIndex - i * 3);
+                    if (particleIndex < coordinates.length) {
+                            const size = 4 + Math.sin(Date.now() / 200 + i) * 2; // Smaller particles
+                            const particle = L.marker(coordinates[particleIndex], {
+                                icon: L.divIcon({
+                                    className: 'path-particle',
+                                    iconSize: [size, size],
+                                    html: `<div style="width:100%;height:100%;background:var(--primary-color);border-radius:50%;filter:blur(${size/2}px)"></div>`
+                                })
+                            });
+                        particles.push(particle);
+                        particle.addTo(map);
+                        }
+                    }
+
+                    // Remove old particles
+                    while (particles.length > particleCount * 2) {
+                        const oldParticle = particles.shift();
+                        map.removeLayer(oldParticle);
+                    }
+                }
+
+                // Add nodes at intervals
+                if (currentIndex % nodeInterval === 0) {
+                    const node = createNode(coordinates[currentIndex], currentIndex, coordinates.length);
+                    nodes.add(node);
+                    node.addTo(map);
+                    
+                    if (nodes.size > 10) {
+                        const oldestNode = nodes.values().next().value;
+                        map.removeLayer(oldestNode);
+                        nodes.delete(oldestNode);
+                    }
+                }
+
+                currentIndex++;
+                setTimeout(animateSegment, animationSpeed);
+            }
+
+            animateSegment();
+        }
+
+// Set Start Point
+        function setStartPoint() {
+            document.querySelectorAll('.control-button').forEach(btn => 
+                btn.classList.remove('active'));
+            document.querySelector('.control-button:nth-child(1)').classList.add('active');
+            activeMode = 'start';
+            
+            // Clear existing path when setting new points
+            clearPath();
+            
+            map.off('mousemove').on('mousemove', updatePreviewMarker);
+            
+            map.off('click').on('click', function onMapClick(e) {
+                if (startMarker) {
+                    map.removeLayer(startMarker);
+                }
+                startMarker = createMarker(e.latlng, 'start').addTo(map);
+                
+                document.querySelector('.control-button:nth-child(1)').classList.remove('active');
+                activeMode = null;
+                showStatus('Start point set');
+                
+                if (previewMarker) {
+                    map.removeLayer(previewMarker);
+                    previewMarker = null;
+                }
+                
+                map.off('mousemove', updatePreviewMarker);
+                map.off('click', onMapClick);
+            });
+        }
+
+        // Set End Point
+        function setEndPoint() {
+            document.querySelectorAll('.control-button').forEach(btn => 
+                btn.classList.remove('active'));
+            document.querySelector('.control-button:nth-child(2)').classList.add('active');
+            activeMode = 'end';
+            
+            // Clear existing path when setting new points
+            clearPath();
+            
+            map.off('mousemove').on('mousemove', updatePreviewMarker);
+            
+            map.off('click').on('click', function onMapClick(e) {
+                if (endMarker) {
+                    map.removeLayer(endMarker);
+                }
+                endMarker = createMarker(e.latlng, 'end').addTo(map);
+                
+                document.querySelector('.control-button:nth-child(2)').classList.remove('active');
+                activeMode = null;
+                showStatus('End point set');
+                
+                if (previewMarker) {
+                    map.removeLayer(previewMarker);
+                    previewMarker = null;
+                }
+                
+                map.off('mousemove', updatePreviewMarker);
+                map.off('click', onMapClick);
+            });
+        }
+
+        // Update preview marker position
+        function updatePreviewMarker(e) {
+            if (!activeMode) return;
+            
+            if (previewMarker) {
+                map.removeLayer(previewMarker);
+            }
+            
+            previewMarker = createMarker(e.latlng, activeMode);
+            previewMarker.addTo(map);
+            
+            // Add preview styling
+            const markerElement = previewMarker.getElement();
+            if (markerElement) {
+                markerElement.classList.add('marker-preview');
+            }
+        }
+
+        // Status Display
+        function showStatus(message, isError = false) {
+            const status = document.querySelector('.status-panel');
+            status.style.display = 'block';
+            status.className = 'status-panel'; // Reset classes
+            
+            if (isError) {
+                status.classList.add('error');
+            } else {
+                status.classList.add('success');
+            }
+            
+            status.textContent = message;
+            
+            // Add icon based on status
+            const icon = document.createElement('i');
+            icon.className = `fas fa-${isError ? 'exclamation-circle' : 'check-circle'} mr-2`;
+            status.prepend(icon);
+            
+            if (status.timeout) clearTimeout(status.timeout);
+            
+            status.timeout = setTimeout(() => {
+                status.style.opacity = '0';
+                status.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                status.style.display = 'none';
+                    status.style.opacity = '1';
+                    status.style.transform = 'translateY(0)';
+                }, 300);
+            }, 3000);
+        }
+
+        // Find Path
+        function findPath() {
+            const startInput = document.getElementById('startLocation');
+            const endInput = document.getElementById('endLocation');
+
+            if ((!startMarker && !startInput.value) || (!endMarker && !endInput.value)) {
+                showStatus('Please set both start and end points', true);
+                return;
+            }
+
+            document.querySelector('.loading-overlay').style.display = 'grid';
+
+            // Get coordinates from markers or input values
+            const startLocation = startMarker ? 
+                `${startMarker.getLatLng().lat},${startMarker.getLatLng().lng}` : 
+                startInput.value;
+
+            const endLocation = endMarker ? 
+                `${endMarker.getLatLng().lat},${endMarker.getLatLng().lng}` : 
+                endInput.value;
+
+            // Clear existing path
+            clearPath();
+            
+            $.ajax({
+                url: '/find_path',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    start: startLocation,
+                    end: endLocation
+                }),
+                success: function(response) {
+                    document.querySelector('.loading-overlay').style.display = 'none';
+                    
+                    if (response.error) {
+                        showStatus(response.error, true);
+                    } else if (response.route && response.route.length > 0) {
+                        animatePath(response.route);
+                        
+                        // Log distances for debugging
+                        logDistances(response);
+                        
+                        updateRouteDisplay({
+                            distance: response.distance,
+                            duration: response.duration,
+                            instructions: response.instructions
+                        });
+                        
+                        map.fitBounds(L.latLngBounds(response.route), {
+                            padding: [50, 50],
+                            animate: true
+                        });
+                    } else {
+                        showStatus('No route found', true);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    document.querySelector('.loading-overlay').style.display = 'none';
+                    const errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Failed to calculate route';
+                    showStatus(errorMsg, true);
+                    console.error('Route error:', xhr.responseText);
+                }
+            });
+        }
+
+        // Map Event Listeners
+        map.on('zoomend moveend', () => {
+            if (startMarker) {
+                startMarker._setPos(map.latLngToLayerPoint(startMarker.getLatLng()));
+                startMarker.getElement().style.zIndex = 1000;
+            }
+            if (endMarker) {
+                endMarker._setPos(map.latLngToLayerPoint(endMarker.getLatLng()));
+                endMarker.getElement().style.zIndex = 1000;
+            }
+        });
+
+        // Initialize Controls
+        document.querySelectorAll('.control-button').forEach(button => {
+            button.addEventListener('mouseenter', () => {
+                button.style.transform = 'translateY(-2px)';
+            });
+            button.addEventListener('mouseleave', () => {
+                button.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Add new helper functions for better UX
+        function clearPath() {
+            if (pathLayer) {
+                map.removeLayer(pathLayer);
+                pathLayer = null;
+            }
+            // Remove glow effect if exists
+            if (window.glowPath) {
+                map.removeLayer(window.glowPath);
+                window.glowPath = null;
+            }
+            particles.forEach(p => map.removeLayer(p));
+            particles = [];
+            nodes.forEach(n => map.removeLayer(n));
+            nodes.clear();
+        }
+
+        // Reset Map
+        function resetMap() {
+            // Animate marker removal
+            if (startMarker) {
+                const startEl = startMarker.getElement();
+                if (startEl) {
+                    startEl.style.animation = 'markerRemove 0.5s ease-out forwards';
+                }
+                setTimeout(() => map.removeLayer(startMarker), 500);
+                startMarker = null;
+            }
+            if (endMarker) {
+                const endEl = endMarker.getElement();
+                if (endEl) {
+                    endEl.style.animation = 'markerRemove 0.5s ease-out forwards';
+                }
+                setTimeout(() => map.removeLayer(endMarker), 500);
+                endMarker = null;
+            }
+
+            // Clear path with fade effect
+            if (pathLayer) {
+                const pathEl = pathLayer.getElement();
+                if (pathEl) {
+                    pathEl.style.transition = 'opacity 0.5s ease-out';
+                    pathEl.style.opacity = '0';
+                }
+                setTimeout(() => clearPath(), 500);
+            }
+
+            // Clear search inputs and results
+            const startInput = document.getElementById('startLocation');
+            const endInput = document.getElementById('endLocation');
+            const startResults = document.getElementById('startResults');
+            const endResults = document.getElementById('endResults');
+
+            startInput.value = '';
+            endInput.value = '';
+            startResults.style.display = 'none';
+            endResults.style.display = 'none';
+
+            // Clear instructions panel with animation
+            const instructionsPanel = document.querySelector('.instructions-panel');
+            if (instructionsPanel.style.display !== 'none') {
+                instructionsPanel.style.opacity = '0';
+                instructionsPanel.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    instructionsPanel.style.display = 'none';
+                    instructionsPanel.style.opacity = '1';
+                    instructionsPanel.style.transform = 'translateY(0)';
+                }, 300);
+            }
+
+            showStatus('Map reset');
+        }
+
+        // Add road highlighting
+        function highlightRoads() {
+            const bounds = map.getBounds();
+            const zoom = map.getZoom();
+            
+            // Style main roads
+            map.eachLayer(layer => {
+                if (layer.feature && layer.feature.properties.highway) {
+                    const highway = layer.feature.properties.highway;
+                    if (['motorway', 'trunk', 'primary'].includes(highway)) {
+                        layer.setStyle({
+                            className: 'main-roads'
+                        });
+                    } else if (['secondary', 'tertiary'].includes(highway)) {
+                        layer.setStyle({
+                            className: 'secondary-roads'
+                        });
+                    }
+                }
+            });
+        }
+
+        // Call highlightRoads when map moves
+        map.on('moveend', highlightRoads);
+        map.on('zoomend', highlightRoads);
+
+        document.addEventListener('keydown', function(e) {
+            if (e.target.tagName === 'INPUT') return; // Ignore if typing in input field
+            
+            switch(e.key.toLowerCase()) {
+                case 's':
+                    setStartPoint();
+                    break;
+                case 'e':
+                    setEndPoint();
+                    break;
+                case ' ': // Space
+                    e.preventDefault();
+                    findPath();
+                    break;
+                case 'r':
+                    resetMap();
+                    break;
+                case 'escape':
+                    if (activeMode) {
+                        activeMode = null;
+                        if (previewMarker) {
+                            map.removeLayer(previewMarker);
+                            previewMarker = null;
+                        }
+                        document.querySelectorAll('.control-button').forEach(btn => 
+                            btn.classList.remove('active'));
+                        showStatus('Action cancelled');
+                    }
+                    break;
+            }
+        });
+
+        // Debounce function to limit API calls
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Location search function
+        function searchLocation(query, resultContainer, loadingIndicator) {
+            if (!query || query.length < 3) {
+                resultContainer.style.display = 'none';
+                return;
+            }
+
+            loadingIndicator.style.display = 'block';
+
+            $.ajax({
+                url: './search_location',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ query: query }),
+                success: function(response) {
+                    loadingIndicator.style.display = 'none';
+                    
+                    if (response.results && response.results.length > 0) {
+                        resultContainer.innerHTML = response.results
+                            .map(result => `
+                                <div class="search-result-item" 
+                                     data-lat="${result.lat}" 
+                                     data-lng="${result.lng}"
+                                     data-name="${result.name}">
+                                    <div class="result-main-text">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        ${result.main_text}
+                                    </div>
+                                    ${result.secondary_text ? 
+                                        `<div class="result-secondary-text">${result.secondary_text}</div>` : 
+                                        ''}
+                                </div>
+                            `).join('');
+                        resultContainer.style.display = 'block';
+                    } else {
+                        resultContainer.innerHTML = `
+                            <div class="search-result-item">
+                                <div class="result-main-text">
+                                    <i class="fas fa-times-circle"></i>
+                                    No results found
+                                </div>
+                            </div>`;
+                        resultContainer.style.display = 'block';
+                    }
+                },
+                error: function() {
+                    loadingIndicator.style.display = 'none';
+                    resultContainer.innerHTML = `
+                        <div class="search-result-item error">
+                            <div class="result-main-text">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Error searching location
+                            </div>
+                        </div>`;
+                    resultContainer.style.display = 'block';
+                }
+            });
+        }
+
+        // Initialize search functionality
+        function initializeSearch() {
+            const startInput = document.getElementById('startLocation');
+            const endInput = document.getElementById('endLocation');
+            const startResults = document.getElementById('startResults');
+            const endResults = document.getElementById('endResults');
+            const startLoading = document.getElementById('startLoading');
+            const endLoading = document.getElementById('endLoading');
+
+            // Debounced search functions
+            const debouncedStartSearch = debounce(
+                (query) => searchLocation(query, startResults, startLoading), 
+                300
+            );
+            const debouncedEndSearch = debounce(
+                (query) => searchLocation(query, endResults, endLoading), 
+                300
+            );
+
+            // Start location input handlers
+            startInput.addEventListener('input', (e) => {
+                debouncedStartSearch(e.target.value);
+            });
+
+            startResults.addEventListener('click', (e) => {
+                const item = e.target.closest('.search-result-item');
+                if (!item) return;
+
+                const lat = parseFloat(item.dataset.lat);
+                const lng = parseFloat(item.dataset.lng);
+                
+                // Set marker
+                if (startMarker) map.removeLayer(startMarker);
+                startMarker = createMarker([lat, lng], 'start').addTo(map);
+                
+                // Update input and hide results
+                startInput.value = item.dataset.name;
+                startResults.style.display = 'none';
+                
+                // Pan to location
+                map.setView([lat, lng], Math.max(map.getZoom(), 12));
+            });
+
+            // End location input handlers
+            endInput.addEventListener('input', (e) => {
+                debouncedEndSearch(e.target.value);
+            });
+
+            endResults.addEventListener('click', (e) => {
+                const item = e.target.closest('.search-result-item');
+                if (!item) return;
+
+                const lat = parseFloat(item.dataset.lat);
+                const lng = parseFloat(item.dataset.lng);
+                
+                // Set marker
+                if (endMarker) map.removeLayer(endMarker);
+                endMarker = createMarker([lat, lng], 'end').addTo(map);
+                
+                // Update input and hide results
+                endInput.value = item.dataset.name;
+                endResults.style.display = 'none';
+                
+                // Pan to location
+                map.setView([lat, lng], Math.max(map.getZoom(), 12));
+                
+                // If both markers are set, find path automatically
+                if (startMarker && endMarker) {
+                    findPath();
+                }
+            });
+
+            // Handle clicks outside search results to close them
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('.search-container')) {
+                    startResults.style.display = 'none';
+                    endResults.style.display = 'none';
+                }
+            });
+
+            // Handle focus events to show/hide results
+            startInput.addEventListener('focus', () => {
+                if (startInput.value && startResults.children.length > 0) {
+                    startResults.style.display = 'block';
+                }
+                endResults.style.display = 'none';
+            });
+
+            endInput.addEventListener('focus', () => {
+                if (endInput.value && endResults.children.length > 0) {
+                    endResults.style.display = 'block';
+                }
+                startResults.style.display = 'none';
+            });
+
+            // Handle Enter key on end input
+            endInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && startMarker && endMarker) {
+                    findPath();
+                }
+            });
+        }
+
+        // Add function to display instructions
+        function displayInstructions(instructions, totalDistance, totalDuration) {
+            const panel = document.querySelector('.instructions-panel');
+            const summary = panel.querySelector('.route-summary');
+            const list = panel.querySelector('.instructions-list');
+
+            summary.textContent = `Total: ${formatDistance(totalDistance)} (${totalDuration})`;
+            
+            list.innerHTML = instructions
+                .filter(instruction => instruction.instruction) // Filter out empty instructions
+                .map((instruction, index) => `
+                    <div class="instruction-item" style="animation: slideIn 0.3s ${index * 0.05}s ease both">
+                        <div class="instruction-text">
+                            <i class="fas fa-${getInstructionIcon(instruction.instruction)} mr-2"></i>
+                            ${instruction.instruction}
+                        </div>
+                        <div class="instruction-distance">${formatDistance(instruction.distance)}</div>
+                    </div>
+                `).join('');
+
+            panel.style.display = 'block';
+            panel.style.animation = 'slideInUp 0.3s ease';
+        }
+
+        // Helper function to get appropriate icon for instruction
+        function getInstructionIcon(instruction) {
+            if (instruction.toLowerCase().includes('turn right')) return 'arrow-right';
+            if (instruction.toLowerCase().includes('turn left')) return 'arrow-left';
+            if (instruction.toLowerCase().includes('continue')) return 'arrow-up';
+            if (instruction.toLowerCase().includes('arrive')) return 'flag-checkered';
+            return 'circle';
+        }
+
+        // Initialize search when document is ready
+        document.addEventListener('DOMContentLoaded', initializeSearch);
+
+        // Format distance in kilometers only
+        function formatDistance(kilometers) {
+            if (kilometers < 0.1) {
+                const meters = Math.round(kilometers * 1000);
+                return `${meters} m`;
+            }
+            return `${kilometers.toFixed(1)} km`;
+        }
+
+        // Update route display
+        function updateRouteDisplay(info) {
+            const timeStr = formatDuration(info.duration);
+            showStatus(`Route found: ${formatDistance(info.distance)} (${timeStr})`);
+            
+            if (info.instructions) {
+                displayInstructions(
+                    info.instructions.map(inst => ({
+                        ...inst,
+                        distance: inst.distance
+                    })),
+                    info.distance,
+                    timeStr
+                );
+            }
+        }
+
+        // Improve duration formatting
+        function formatDuration(minutes) {
+            const hours = Math.floor(minutes / 60);
+            const mins = Math.round(minutes % 60);
+            
+            if (hours === 0) return `${mins} min`;
+            if (mins === 0) return `${hours}h`;
+            return `${hours}h ${mins}min`;
+        }
+
+        // Add debug logging
+        function logDistances(info) {
+            console.log('Raw distance from server (km):', info.distance);
+            console.log('Converted distance:', formatDistance(info.distance));
+            if (info.instructions) {
+                console.log('Step distances:', info.instructions.map(i => 
+                    `${formatDistance(i.distance)}`
+                ));
+            }
+        }
+
+        // Add this after the existing script content
+        function togglePanel(panel) {
+            panel.classList.toggle('collapsed');
+            const btn = panel.querySelector('.collapse-btn i');
+            if (panel.classList.contains('collapsed')) {
+                btn.classList.remove('fa-chevron-up');
+                btn.classList.add('fa-chevron-down');
+            } else {
+                btn.classList.remove('fa-chevron-down');
+                btn.classList.add('fa-chevron-up');
+            }
+        }
+    </script>
+</body>
+</html>
