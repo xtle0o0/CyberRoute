@@ -4,6 +4,8 @@ A modern, cyberpunk-themed web application for finding and visualizing routes be
 
 ![CyberRoute Preview](images/preview.png)
 
+Was bored and decided to make this shit 
+
 ## Features
 
 - 🗺️ Interactive map with dark cyberpunk theme
